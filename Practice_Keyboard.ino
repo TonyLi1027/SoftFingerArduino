@@ -5,7 +5,7 @@ unsigned long timer; //check the time
 static unsigned int printer;//only let serial print once
 char vol_byte = 0;
 String vol_str = "";
-bool not_a_number = false;
+static bool not_a_number = false;
 
 void setup() {
   // put your setup code here, to run once:
@@ -62,9 +62,19 @@ void loop() {
       printer = 3;
       while (Serial.available() > 0) {
         vol_byte = Serial.read();
-        if ((vol_byte >= '0') && (vol_byte <= '9')) {
-          vol_str += vol_byte;
-        } else if ((vol_byte == '\n') && (vol_str != "")) {
+        Serial.print("vol_byte is");
+        Serial.println(vol_byte, DEC);
+        Serial.println(vol_str);
+        Serial.println("state is");
+        Serial.println(state,DEC);
+        if (((vol_byte >= '0') && (vol_byte <= '9')) || ((vol_byte == 10)&&(vol_str == ""))) {
+          if (vol_byte == 10) {
+            vol_str += "";
+          } else {
+            vol_str += vol_byte;
+          }
+        } else if ((vol_byte == 10) && (vol_str != "")) {
+          Serial.print("it goes here");
           if (not_a_number) {
             Serial.println("Not a valid Number");
             state = 3;
@@ -74,7 +84,9 @@ void loop() {
             printer = 3;
             Serial.println("it goes here");
           }
-        } else {
+        }
+        else {
+          //Serial.print("it goes here");
           not_a_number = true;
         }
 
@@ -91,12 +103,4 @@ void loop() {
       }
   }
 
-  //      printer = 3;
-  //      if (keyPressed() == 'q') {
-  //        state = 1;
-  //        printer = 0;
-  //      }
-
-
 }
-//char a = keyPressed();
