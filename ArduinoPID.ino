@@ -4,8 +4,9 @@ unsigned long previousTime;
 double elapsedTime;
 double error;
 double lastError;
-double input,output,setPoint;
+double input,output;
 int len = 1;
+int16_t kp = 10;
 static uint8_t up = 0;
 static uint16_t x_ref = 0;
 static uint16_t y_ref = 0;
@@ -14,7 +15,8 @@ int tem_arr[10];
 unsigned long int t = millis();
 static String c_arr;
 static uint8_t i = 0;
-uint16_t MCP4725_value = 1000;
+double setPoint = 250;
+uint16_t MCP4725_value = 4437 - setPoint*7.1;
 Adafruit_MCP4725 MCP4725;
 
 void setup() {
@@ -22,9 +24,8 @@ void setup() {
   MCP4725.begin(0x60);
   pinMode(A0,OUTPUT);
   pinMode(A1,OUTPUT);
-  MCP4725.setVoltage(1000,false);
-  Setpoint = 348;
-  Input = 1000;
+  MCP4725.setVoltage(MCP4725_value,false);
+  input = 1000;
   delay(1000);
 }
 
@@ -38,8 +39,9 @@ double computePID(double inp){
   return out;
   }
 void execute(){
-  t = millis();
-  
+  MCP4725_value = 4437 - setPoint*7.1 - computePID(num_arr[1]);
+  MCP4725.setVoltage(MCP4725_value,false);
+  i = 0;
 }
 
 void loop() {
