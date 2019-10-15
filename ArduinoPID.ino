@@ -3,10 +3,12 @@
 unsigned long previousTime;
 double elapsedTime;
 double error;
-double lastError;
+static double lastError;
+static double rateError;
 double input,output;
 int len = 1;
-int16_t kp = 10;
+int16_t kp = 2;
+int16_t kd = 0.5;
 static uint8_t up = 0;
 static uint16_t x_ref = 0;
 static uint16_t y_ref = 0;
@@ -15,8 +17,8 @@ int tem_arr[10];
 unsigned long int t = millis();
 static String c_arr;
 static uint8_t i = 0;
-double setPoint = 250;
-uint16_t MCP4725_value = 4437 - setPoint*7.1;
+double setPoint = 310;
+uint16_t MCP4725_value = 4947.7 - setPoint*7.36;
 Adafruit_MCP4725 MCP4725;
 
 void setup() {
@@ -33,13 +35,25 @@ double computePID(double inp){
   t = millis();
   elapsedTime = (double)(t - previousTime);
   error = setPoint - inp;
-  double out = kp*error;
+  rateError = (error-lastError)/elapsedTime;
+  if(abs(error) > 80){
+    error = 0;
+    rateError = 0;
+  }else if(abs(error) < 10){
+    error = 0;
+    rateError = 0;
+  }
+  double out = kp*error + kd*rateError;
   lastError = error;
   previousTime = t;
   return out;
   }
 void execute(){
-  MCP4725_value = 4437 - setPoint*7.1 - computePID(num_arr[1]);
+  if(setPoint > 377 && setPoint < 479){
+    MCP4725_value = 4947.7 - setPoint*7.36 - computePID(num_arr[1]);
+  }else if(setPoint > 147 && setPoint <= 377){
+    MCP4725_value = 0.0102*setPoint*setPoint - 11.759*setPoint + 5168.8 - computePID(num_arr[1]);
+  }
   MCP4725.setVoltage(MCP4725_value,false);
   i = 0;
 }
