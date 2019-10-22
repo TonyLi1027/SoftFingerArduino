@@ -19,7 +19,7 @@ unsigned long int t = millis();
 static String c_arr;
 static uint8_t i = 0;
 static double setPoint;
-uint16_t MCP4725_value = 1000;//4947.7 - setPoint*7.36;
+static uint16_t MCP4725_value = 1000;//4947.7 - setPoint*7.36;
 Adafruit_MCP4725 MCP4725;
 
 typedef struct{
@@ -73,17 +73,35 @@ void setup() {
   MCP4725.begin(0x60);
   pinMode(A0,OUTPUT);
   pinMode(A1,OUTPUT);
+//  for(uint8_t j = 0; j < sizeof(MyDictionary)/sizeof(ArduinoDictionary); ++j) {
+//      //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
+//    if(MyDictionary[j].diff == 250){
+//       MCP4725_value = MyDictionary[j].Input;
+//       input = MyDictionary[j].Input;
+//       setPoint = MyDictionary[j].diff;
+//       break;
+//    }
+// }
+  setInput(169);
+  MCP4725.setVoltage(MCP4725_value,false);
+  delay(1000);
+}
+
+void setInput(int Input){
   for(uint8_t j = 0; j < sizeof(MyDictionary)/sizeof(ArduinoDictionary); ++j) {
       //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
-    if(MyDictionary[j].diff == 250){
+    if(MyDictionary[j].diff == Input){
        MCP4725_value = MyDictionary[i].Input;
        input = MyDictionary[j].Input;
        setPoint = MyDictionary[j].diff;
        break;
+    }else if((MyDictionary[j].diff < Input) && (MyDictionary[j+1].diff > Input)){
+       MCP4725_value = MyDictionary[i].Input;
+       input = MyDictionary[j].Input + (Input - MyDictionary[j].diff);
+       setPoint = Input;
+       break;
     }
- }
-  MCP4725.setVoltage(MCP4725_value,false);
-  delay(1000);
+ }  
 }
 
 double computePID(double inp, double setpoint, double kp, double kd){
