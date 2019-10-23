@@ -6,10 +6,12 @@ double elapsedTime;
 double error;
 static double lastError;
 static double rateError;
+static double cumError = 0;
 static double input,output;
 int len = 1;
 int16_t kp = 2;
 int16_t kd = 0.5;
+int16_t ki = 0;
 static uint8_t up = 0;
 static uint16_t x_ref = 0;
 static uint16_t y_ref = 0;
@@ -64,7 +66,17 @@ const ArduinoDictionary MyDictionary[]{
   {3050, 228},
   {3100, 233},
   {3150, 242},
-  {3200, 250}
+  {3200, 250},
+  {3250, 253},
+  {3300, 261},
+  {3350, 264},
+  {3400, 274},
+  {3450, 277},
+  {3500, 286},
+  {3550, 290},
+  {3600, 294},
+  {3650, 299},
+  {3700, 302}
 };
 
 void setup() {
@@ -82,7 +94,7 @@ void setup() {
 //       break;
 //    }
 // }
-  setInput(169);
+  setInput(84);
   MCP4725.setVoltage(MCP4725_value,false);
   delay(1000);
 }
@@ -91,32 +103,34 @@ void setInput(int Input){
   for(uint8_t j = 0; j < sizeof(MyDictionary)/sizeof(ArduinoDictionary); ++j) {
       //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
     if(MyDictionary[j].diff == Input){
-       MCP4725_value = MyDictionary[i].Input;
+       MCP4725_value = MyDictionary[j].Input;
        input = MyDictionary[j].Input;
        setPoint = MyDictionary[j].diff;
        break;
     }else if((MyDictionary[j].diff < Input) && (MyDictionary[j+1].diff > Input)){
-       MCP4725_value = MyDictionary[i].Input;
-       input = MyDictionary[j].Input + (Input - MyDictionary[j].diff);
+       MCP4725_value = MyDictionary[j+1].Input - 5*(MyDictionary[j+1].diff - Input);
+       input = MyDictionary[j+1].Input - 5*(MyDictionary[j+1].diff - Input);
        setPoint = Input;
        break;
     }
  }  
 }
 
-double computePID(double inp, double setpoint, double kp, double kd){
+double computePID(double inp, double setpoint, double kp, double kd, double ki){
   t = millis();
   elapsedTime = (double)(t - previousTime);
   error = setpoint - inp;
   rateError = (error-lastError)/elapsedTime;
+  cumError += error*elapsedTime;
   if(abs(error) > 80){
     error = 0;
     rateError = 0;
-  }else if(abs(error) < 5){
-    error = 0;
-    rateError = 0;
   }
-  double out = kp*error + kd*rateError;
+//  }else if(abs(error) < 5){
+//    error = 0;
+//    rateError = 0;
+//  }
+  double out = kp*error + kd*rateError + ki*cumError;
   lastError = error;
   previousTime = t;
   return out;
@@ -124,7 +138,7 @@ double computePID(double inp, double setpoint, double kp, double kd){
 
   
 void execute(){
-  MCP4725_value = input - computePID(num_arr[9]-num_arr[1],setPoint,kp,kd);
+  MCP4725_value = MCP4725_value + computePID(num_arr[9]-num_arr[1],setPoint,kp,kd,ki);
   MCP4725.setVoltage(MCP4725_value,false);
   i = 0;
 }
