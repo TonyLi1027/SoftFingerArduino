@@ -7,7 +7,7 @@ double error;
 static double lastError;
 static double rateError;
 static double cumError = 0;
-static double input,output;
+static double input, output;
 int len = 1;
 int16_t kp = 2;
 int16_t kd = 0.5;
@@ -24,12 +24,12 @@ static double setPoint;
 static uint16_t MCP4725_value = 1000;//4947.7 - setPoint*7.36;
 Adafruit_MCP4725 MCP4725;
 
-typedef struct{
+typedef struct {
   uint16_t Input;
   int16_t diff;
-}ArduinoDictionary;
+} ArduinoDictionary;
 
-const ArduinoDictionary MyDictionary[]{
+const ArduinoDictionary MyDictionary[] {
   {1400, -4},
   {1450, 3},
   {1500, 8},
@@ -76,100 +76,94 @@ const ArduinoDictionary MyDictionary[]{
   {3550, 290},
   {3600, 294},
   {3650, 299},
-  {3700, 302}
+  {3700, 302},
+  {3750, 306},
+  {3800, 308},
+  {3850, 309}
 };
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   MCP4725.begin(0x60);
-  pinMode(A0,OUTPUT);
-  pinMode(A1,OUTPUT);
-//  for(uint8_t j = 0; j < sizeof(MyDictionary)/sizeof(ArduinoDictionary); ++j) {
-//      //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
-//    if(MyDictionary[j].diff == 250){
-//       MCP4725_value = MyDictionary[j].Input;
-//       input = MyDictionary[j].Input;
-//       setPoint = MyDictionary[j].diff;
-//       break;
-//    }
-// }
-  setInput(84);
-  MCP4725.setVoltage(MCP4725_value,false);
+  pinMode(A0, OUTPUT);
+  pinMode(A1, OUTPUT);
+  setInput(185);
+  MCP4725.setVoltage(MCP4725_value, false);
   delay(1000);
 }
 
-void setInput(int Input){
-  for(uint8_t j = 0; j < sizeof(MyDictionary)/sizeof(ArduinoDictionary); ++j) {
-      //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
-    if(MyDictionary[j].diff == Input){
-       MCP4725_value = MyDictionary[j].Input;
-       input = MyDictionary[j].Input;
-       setPoint = MyDictionary[j].diff;
-       break;
-    }else if((MyDictionary[j].diff < Input) && (MyDictionary[j+1].diff > Input)){
-       MCP4725_value = MyDictionary[j+1].Input - 5*(MyDictionary[j+1].diff - Input);
-       input = MyDictionary[j+1].Input - 5*(MyDictionary[j+1].diff - Input);
-       setPoint = Input;
-       break;
+void setInput(int Input) {
+  for (uint8_t j = 0; j < sizeof(MyDictionary) / sizeof(ArduinoDictionary); ++j) {
+    //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
+    if (MyDictionary[j].diff == Input) {
+      MCP4725_value = MyDictionary[j].Input;
+      input = MyDictionary[j].Input;
+      setPoint = MyDictionary[j].diff;
+      break;
+    } else if ((MyDictionary[j].diff < Input) && (MyDictionary[j + 1].diff > Input)) {
+      MCP4725_value = MyDictionary[j + 1].Input - 5 * (MyDictionary[j + 1].diff - Input);
+      input = MyDictionary[j + 1].Input - 5 * (MyDictionary[j + 1].diff - Input);
+      setPoint = Input;
+      break;
     }
- }  
+  }
 }
 
-double computePID(double inp, double setpoint, double kp, double kd, double ki){
+double computePID(double inp, double setpoint, double kp, double kd, double ki) {
   t = millis();
   elapsedTime = (double)(t - previousTime);
   error = setpoint - inp;
-  rateError = (error-lastError)/elapsedTime;
-  cumError += error*elapsedTime;
-  if(abs(error) > 80){
+  rateError = (error - lastError) / elapsedTime;
+  cumError += error * elapsedTime;
+  if (abs(error) > 80) {
     error = 0;
     rateError = 0;
   }
-//  }else if(abs(error) < 5){
-//    error = 0;
-//    rateError = 0;
-//  }
-  double out = kp*error + kd*rateError + ki*cumError;
+  double out = kp * error + kd * rateError + ki * cumError;
   lastError = error;
   previousTime = t;
   return out;
-  }
+}
 
-  
-void execute(){
-  MCP4725_value = MCP4725_value + computePID(num_arr[9]-num_arr[1],setPoint,kp,kd,ki);
-  MCP4725.setVoltage(MCP4725_value,false);
-  i = 0;
+
+void execute() {
+  if (abs(MCP4725_value - input) > 500 ) { // in case the psi suddenly go crazy
+    MCP4725_value = input;
+  } else {
+    MCP4725_value = MCP4725_value + computePID(num_arr[9] - num_arr[1], setPoint, kp, kd, ki);
+    MCP4725.setVoltage(MCP4725_value, false);
+    i = 0;
+  }
 }
 
 void loop() {
- if(Serial.available())
- {
-   char c = Serial.read();
-   //start the packet of the data;
-   if (c == '['){
-    len = 0;
+  if (Serial.available())
+  {
+    char c = Serial.read();
+    //start the packet of the data;
+    if (c == '[') {
+      len = 0;
     }
-   //end of the packet of the data;
-    else if(c == ']'){
-     //record the last data;
-     num_arr[i] = c_arr.toInt();
-     c_arr = "";
-     i = i + 1;
-     //execute;
-     execute();
-     len = 1; 
+    //end of the packet of the data;
+    else if (c == ']') {
+      //record the last data;
+      num_arr[i] = c_arr.toInt();
+      c_arr = "";
+      i = i + 1;
+      //execute;
+      execute();
+      len = 1;
     }
-    else if (c == ',' && len == 0){
+    else if (c == ',' && len == 0) {
       //change the char to int and store them for every ','
       num_arr[i] = c_arr.toInt();
       c_arr = "";
       i = i + 1;
     }
-    else if(len == 0){
+    else if (len == 0) {
       //store the chars
       c_arr += c;
-    } 
- }
+    }
+  }
 }
