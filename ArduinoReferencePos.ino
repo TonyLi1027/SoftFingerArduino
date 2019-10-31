@@ -8,6 +8,7 @@ static double lastError;
 static double rateError;
 static double cumError = 0;
 static double input, output;
+int expectDiff = 1080;
 int len = 1;
 int16_t kp = 2;
 int16_t kd = 0.5;
@@ -88,12 +89,17 @@ void setup() {
   MCP4725.begin(0x60);
   pinMode(A0, OUTPUT);
   pinMode(A1, OUTPUT);
-  setInput(185);
+  setInput(expectDiff);
   MCP4725.setVoltage(MCP4725_value, false);
   delay(1000);
 }
 
 void setInput(int Input) {
+  if((Input - MyDictionary[sizeof(MyDictionary) / sizeof(ArduinoDictionary)-1].diff > 1) || (Input - MyDictionary[0].diff < 0)){
+    MCP4725_value = MyDictionary[0].Input;
+    input = MyDictionary[0].Input;
+    setPoint = 0;
+  }
   for (uint8_t j = 0; j < sizeof(MyDictionary) / sizeof(ArduinoDictionary); ++j) {
     //Serial.println(MyDictionary[i].x_val);//Prints the values: "Settings", "Ajustes" and "Paramètres"
     if (MyDictionary[j].diff == Input) {
@@ -129,11 +135,19 @@ double computePID(double inp, double setpoint, double kp, double kd, double ki) 
 
 void execute() {
   if (abs(MCP4725_value - input) > 500 ) { // in case the psi suddenly go crazy
-    MCP4725_value = input;
-  } else {
-    MCP4725_value = MCP4725_value + computePID(num_arr[9] - num_arr[1], setPoint, kp, kd, ki);
+    setInput(expectDiff);
     MCP4725.setVoltage(MCP4725_value, false);
     i = 0;
+  } else {
+    if (sizeof(num_arr) / sizeof(num_arr[0]) == 10) {
+      MCP4725_value = MCP4725_value + computePID(num_arr[9] - num_arr[1], setPoint, kp, kd, ki);
+      MCP4725.setVoltage(MCP4725_value, false);
+      i = 0;
+    } else {
+      setInput(expectDiff);
+      MCP4725.setVoltage(MCP4725_value, false);
+      i = 0;
+    }
   }
 }
 
